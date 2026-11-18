@@ -101,6 +101,14 @@ export default {
 
         // Перенаправление на страницу данных после авторизации
         const redirect = this.$route.query.redirect || '/data'
+
+        // Офлайн-сессия: API недоступен, права ограничены — предупреждаем явно
+        if (authStore.user?.offline) {
+          this.success = 'Вход выполнен, но API недоступен: приложение работает на локальных данных, права ограничены'
+          setTimeout(() => this.$router.push(redirect), 1200)
+          return
+        }
+
         this.$router.push(redirect)
       } catch (err) {
         this.error = err.response?.data?.error || err.message || 'Ошибка авторизации. Проверьте email и пароль'

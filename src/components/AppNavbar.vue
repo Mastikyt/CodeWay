@@ -73,6 +73,14 @@
                 <span class="badge badge-primary mr-2" style="font-size: 11px;">
                   {{ user.role === 'admin' ? 'Админ' : 'Студент' }}
                 </span>
+                <span
+                  v-if="user.offline"
+                  class="badge badge-warning mr-2"
+                  style="font-size: 11px;"
+                  title="API недоступен: данные хранятся только в браузере, права ограничены"
+                >
+                  офлайн
+                </span>
                 <strong>{{ user.name }}</strong>
               </a>
               <div class="dropdown-menu dropdown-menu-right shadow-lg" style="background: var(--bg-surface); border-color: var(--border-bright);">

@@ -272,6 +272,16 @@
       },
       "createdAt": "2026-11-18T06:34:10.574Z",
       "ownerId": 1
+    },
+    {
+      "id": 1794990972764,
+      "action": "LOGIN",
+      "entityType": "user",
+      "entityId": 1,
+      "userId": 1,
+      "userName": "Администратор (Беларусь)",
+      "ownerId": 1,
+      "createdAt": "2026-11-18T08:36:12.764Z"
     }
   ],
   "files": [],

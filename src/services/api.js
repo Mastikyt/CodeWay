@@ -428,7 +428,9 @@ export const authApi = {
       }
 
       // Сервер недоступен — офлайн-режим на localStorage.
-      // Роль понижается до 'user': без сервера права нельзя ни подтвердить, ни проверить.
+      // Права без сервера подтвердить нельзя, поэтому офлайн-сессия всегда
+      // ограничена ролью 'user': даже если в localStorage.users лежит 'admin'.
+      // Настоящая роль вернётся при первом же успешном входе через API.
       const offlineUser = await localFallback(() => {
         let users = JSON.parse(localStorage.getItem('users') || '[]')
         if (users.length === 0) {
