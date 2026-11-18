@@ -55,6 +55,15 @@ body {
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* Tailwind-утилита .collapse ставит visibility: collapse и прячет пункты меню.
+   Плюс держим меню раскрытым: иначе на ширине <992px Bootstrap его прячет. */
+.navbar .collapse,
+.navbar-collapse {
+  visibility: visible !important;
+  display: flex !important;
+  flex-basis: auto;
+}
+
 .navbar-brand {
   font-size: 22px;
   font-weight: 800;
