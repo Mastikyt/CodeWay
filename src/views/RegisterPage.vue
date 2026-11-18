@@ -23,6 +23,16 @@
           <input type="password" class="form-control" v-model="password" placeholder="Минимум 6 символов" required minlength="6" />
         </div>
         <div class="form-group">
+          <label style="color: var(--text-secondary); font-size: 13px; font-weight: 600;">Курс обучения</label>
+          <select class="form-control" v-model="course">
+            <option :value="null">Не указывать</option>
+            <option :value="1">1 курс</option>
+            <option :value="2">2 курс</option>
+            <option :value="3">3 курс</option>
+            <option :value="4">4 курс</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label style="color: var(--text-secondary); font-size: 13px; font-weight: 600;">Подтверждение пароля</label>
           <input type="password" class="form-control" v-model="passwordConfirm" placeholder="Повторите пароль" required />
         </div>
@@ -55,6 +65,7 @@ export default {
       email: '',
       password: '',
       passwordConfirm: '',
+      course: null,
       isLoading: false,
       error: '',
     }
@@ -80,6 +91,7 @@ export default {
           name: this.name,
           email: this.email,
           password: this.password,
+          course: this.course,
         })
 
         this.$router.push('/data')

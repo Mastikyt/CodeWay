@@ -7,6 +7,7 @@ import DataPage from '../views/DataPage.vue'
 import AdminPage from '../views/AdminPage.vue'
 import LogsPage from '../views/LogsPage.vue'
 import FilesPage from '../views/FilesPage.vue'
+import ProfilePage from '../views/ProfilePage.vue'
 import TasksView from '../views/TasksView.vue'
 
 const routes = [
@@ -18,6 +19,7 @@ const routes = [
   { path: '/admin', name: 'admin', component: AdminPage, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/logs', name: 'logs', component: LogsPage, meta: { requiresAuth: true } },
   { path: '/files', name: 'files', component: FilesPage, meta: { requiresAuth: true } },
+  { path: '/profile', name: 'profile', component: ProfilePage, meta: { requiresAuth: true } },
   { path: '/tasks', name: 'tasks', component: TasksView },
 ]
 

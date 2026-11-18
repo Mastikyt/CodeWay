@@ -10,7 +10,8 @@
       "Город": "Минск",
       "Статус": "активный",
       "Стоимость": "$129",
-      "createdAt": "2026-10-14T06:00:00.000Z"
+      "createdAt": "2026-10-14T06:00:00.000Z",
+      "ownerId": 1
     },
     {
       "id": 2,
@@ -22,7 +23,8 @@
       "Город": "Гомель",
       "Статус": "активный",
       "Стоимость": "$119",
-      "createdAt": "2026-10-14T06:05:00.000Z"
+      "createdAt": "2026-10-14T06:05:00.000Z",
+      "ownerId": 1
     },
     {
       "id": 3,
@@ -34,7 +36,78 @@
       "Город": "Гродно",
       "Статус": "завершил",
       "Стоимость": "$140",
-      "createdAt": "2026-10-14T06:10:00.000Z"
+      "createdAt": "2026-10-14T06:10:00.000Z",
+      "ownerId": 1
+    },
+    {
+      "id": 1794989535478,
+      "Имя": "Пётр",
+      "Статус": "активный",
+      "Курс": "UX/UI дизайн",
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:12:15.478Z"
+    },
+    {
+      "id": 1794989566008,
+      "Имя": "Ольга",
+      "Статус": "новый",
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:12:46.008Z"
+    },
+    {
+      "Имя": "Анна",
+      "Статус": "активный",
+      "id": 1794989566081,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:12:46.081Z",
+      "source": "Excel Import"
+    },
+    {
+      "Имя": "Борис",
+      "Статус": "новый",
+      "id": 1794989566082,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:12:46.081Z",
+      "source": "Excel Import"
+    },
+    {
+      "Имя": "Вера",
+      "id": 1794989566086,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:12:46.081Z",
+      "source": "Excel Import"
+    },
+    {
+      "id": 1794989620523,
+      "Имя": "Пётр",
+      "Статус": "активный",
+      "Курс": "UX/UI дизайн",
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:13:40.523Z",
+      "updatedAt": "2026-11-18T08:13:40.523Z",
+      "duplicatedFrom": 1794989535478
+    },
+    {
+      "id": 1794989620745,
+      "Имя": "Алексей",
+      "Фамилия": "Смирнов",
+      "Курс": "Frontend-разработка",
+      "Email": "smirnov@codeway.by",
+      "Телефон": "+375 (29) 111-22-33",
+      "Город": "Минск",
+      "Статус": "активный",
+      "Стоимость": "$129",
+      "createdAt": "2026-11-18T08:13:40.745Z",
+      "ownerId": 1,
+      "ownerName": "Администратор (Беларусь)",
+      "updatedAt": "2026-11-18T08:13:40.745Z",
+      "duplicatedFrom": 1
     }
   ],
   "logs": [
@@ -49,7 +122,8 @@
       "newData": {
         "email": "user@codeway.by"
       },
-      "createdAt": "2026-11-18T05:54:47.629Z"
+      "createdAt": "2026-11-18T05:54:47.629Z",
+      "ownerId": 1
     },
     {
       "id": 1794981369324,
@@ -62,7 +136,8 @@
       "newData": {
         "email": "admin@codeway.by"
       },
-      "createdAt": "2026-11-18T05:56:09.324Z"
+      "createdAt": "2026-11-18T05:56:09.324Z",
+      "ownerId": 1
     },
     {
       "id": 1794981383741,
@@ -75,7 +150,8 @@
       "newData": {
         "email": "admin@codeway.by"
       },
-      "createdAt": "2026-11-18T05:56:23.741Z"
+      "createdAt": "2026-11-18T05:56:23.741Z",
+      "ownerId": 1
     },
     {
       "id": 1794981636124,
@@ -89,7 +165,8 @@
         "name": "Тест",
         "email": "test@codeway.by"
       },
-      "createdAt": "2026-11-18T06:00:36.124Z"
+      "createdAt": "2026-11-18T06:00:36.124Z",
+      "ownerId": 1
     },
     {
       "id": 1794981646638,
@@ -102,7 +179,8 @@
       "newData": {
         "email": "test@codeway.by"
       },
-      "createdAt": "2026-11-18T06:00:46.638Z"
+      "createdAt": "2026-11-18T06:00:46.638Z",
+      "ownerId": 1
     },
     {
       "id": 1794981657199,
@@ -115,7 +193,8 @@
       "newData": {
         "email": "admin@codeway.by"
       },
-      "createdAt": "2026-11-18T06:00:57.199Z"
+      "createdAt": "2026-11-18T06:00:57.199Z",
+      "ownerId": 1
     },
     {
       "id": 1794981720619,
@@ -128,7 +207,8 @@
       "newData": {
         "email": "admin@codeway.by"
       },
-      "createdAt": "2026-11-18T06:02:00.619Z"
+      "createdAt": "2026-11-18T06:02:00.619Z",
+      "ownerId": 1
     },
     {
       "id": 1794981731242,
@@ -141,7 +221,8 @@
       "newData": {
         "email": "user@codeway.by"
       },
-      "createdAt": "2026-11-18T06:02:11.242Z"
+      "createdAt": "2026-11-18T06:02:11.242Z",
+      "ownerId": 1
     },
     {
       "id": 1794981740807,
@@ -154,7 +235,8 @@
       "newData": {
         "email": "admin@codeway.by"
       },
-      "createdAt": "2026-11-18T06:02:20.807Z"
+      "createdAt": "2026-11-18T06:02:20.807Z",
+      "ownerId": 1
     },
     {
       "id": 1794982269576,
@@ -167,7 +249,8 @@
       "newData": {
         "email": "admin@codeway.by"
       },
-      "createdAt": "2026-11-18T06:11:09.576Z"
+      "createdAt": "2026-11-18T06:11:09.576Z",
+      "ownerId": 1
     },
     {
       "id": 1794983650574,
@@ -180,10 +263,63 @@
       "newData": {
         "email": "admin@codeway.by"
       },
-      "createdAt": "2026-11-18T06:34:10.574Z"
+      "createdAt": "2026-11-18T06:34:10.574Z",
+      "ownerId": 1
+    },
+    {
+      "id": 1794989600498,
+      "action": "CREATE",
+      "entityType": "record",
+      "entityId": 1,
+      "userId": 2,
+      "userName": "Студент (Минск)",
+      "ownerId": 2,
+      "createdAt": "2026-11-18T08:13:20.498Z"
+    },
+    {
+      "id": 1794989600572,
+      "action": "EXPORT",
+      "entityType": "file",
+      "userId": 2,
+      "userName": "Студент (Минск)",
+      "ownerId": 2,
+      "createdAt": "2026-11-18T08:13:20.572Z"
+    },
+    {
+      "id": 1794989600642,
+      "action": "ADMIN_ONLY",
+      "entityType": "user",
+      "userId": 1,
+      "userName": "Администратор (Беларусь)",
+      "ownerId": 1,
+      "createdAt": "2026-11-18T08:13:20.642Z"
     }
   ],
-  "files": [],
+  "files": [
+    {
+      "id": 1794989600713,
+      "name": "a.xlsx",
+      "size": 10,
+      "rowCount": 0,
+      "storage": "local",
+      "data": "",
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "uploadedAt": "2026-11-18T08:13:20.713Z"
+    },
+    {
+      "id": 1794989600794,
+      "name": "d.xlsx",
+      "size": 1024,
+      "type": ".xlsx",
+      "storage": "gdrive",
+      "rowCount": 5,
+      "data": "",
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "uploadedAt": "2026-11-18T08:13:20.794Z"
+    }
+  ],
   "users": [
     {
       "id": 1,
@@ -220,6 +356,24 @@
       "password": "diag123",
       "role": "user",
       "createdAt": "2026-11-18T06:17:20.635Z"
+    },
+    {
+      "id": 1794989620874,
+      "name": "Новый Студент",
+      "email": "new_sub@codeway.by",
+      "password": "secret123",
+      "role": "user",
+      "course": 3,
+      "createdAt": "2026-11-18T08:13:40.874Z"
+    },
+    {
+      "id": 1794989621010,
+      "name": "��� �����",
+      "email": "nocourse_sub@codeway.by",
+      "password": "secret123",
+      "role": "user",
+      "course": null,
+      "createdAt": "2026-11-18T08:13:41.010Z"
     }
   ]
 }

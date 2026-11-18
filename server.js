@@ -1,6 +1,7 @@
 import express from 'express'
 import fs from 'fs'
 import path from 'path'
+import crypto from 'crypto'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -62,13 +63,54 @@ function writeDb(db) {
 // Отозванные токены (хранятся в памяти сервера до перезапуска)
 const revokedTokens = new Set()
 
+// Секрет для подписи токенов: из переменной окружения, иначе генерируется при старте.
+// При генерации все ранее выданные токены становятся невалидными (сессия переживёт только до рестарта).
+const TOKEN_SECRET = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex')
+if (!process.env.TOKEN_SECRET) {
+  console.warn('⚠️  TOKEN_SECRET не задан — используется случайный ключ на время работы сервера')
+}
+
+// Подпись токена: HMAC-SHA256 по строке "<userId>.<timestamp>"
+function signToken(userId, ts) {
+  return crypto.createHmac('sha256', TOKEN_SECRET).update(`${userId}.${ts}`).digest('base64url')
+}
+
+// Выдача нового токена
+function issueToken(userId) {
+  const ts = Date.now()
+  return `jwt_token_${userId}_${ts}_${signToken(userId, ts)}`
+}
+
 function parseToken(req) {
   const header = req.headers.authorization || ''
-  const match = header.match(/^Bearer\s+jwt_token_(\d+)_(\d+)$/)
-  if (!match) return null
   const raw = header.replace(/^Bearer\s+/, '').trim()
+  const match = raw.match(/^jwt_token_(\d+)_(\d+)_([A-Za-z0-9_-]+)$/)
+  if (!match) return null
   if (revokedTokens.has(raw)) return null
-  return { id: Number(match[1]) }
+
+  const [, id, ts, signature] = match
+  const expected = signToken(id, ts)
+  const a = Buffer.from(expected)
+  const b = Buffer.from(signature)
+  // Сравнение с постоянным временем — иначе подпись подбирается по таймингам
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null
+
+  return { id: Number(id) }
+}
+
+// Полная публичная часть профиля (без пароля): добавляется в req.authUser
+// через get-свойство, чтобы не перечитывать БД в каждом обработчике.
+function publicProfile(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role || 'user',
+    course: user.course ?? null,
+    phone: user.phone ?? '',
+    city: user.city ?? '',
+    createdAt: user.createdAt || null
+  }
 }
 
 // Загружает пользователя по токену. Возвращает null, если токена нет или он невалиден.
@@ -78,7 +120,16 @@ function currentUser(req) {
   const db = readDb()
   const user = (db.users || []).find(u => u.id === token.id)
   if (!user) return null
-  return { id: user.id, name: user.name, email: user.email, role: user.role || 'user' }
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role || 'user',
+    // Ленивое свойство: вторая загрузка пользователя из БД только при обращении
+    get profile() {
+      return publicProfile(user)
+    }
+  }
 }
 
 function isAdmin(req) {
@@ -140,6 +191,7 @@ function migrateOwnership() {
 
   assign(db.data)
   assign(db.files)
+  assign(db.logs)
   if (changed > 0) {
     writeDb(db)
     console.log(`🔧 Миграция ownerId: ${changed} записей привязано к пользователю ${owner.email || owner.id}`)
@@ -147,6 +199,12 @@ function migrateOwnership() {
 }
 
 migrateOwnership()
+
+// Ограничение массового импорта (POST /data/import), чтобы не убить файловую БД
+const IMPORT_LIMIT = 5000
+
+// Сколько дней «назад» считаем в статистике
+const STATS_WINDOWS = [7, 30]
 
 // Регистрация маршрутов для версий API (v1 и v2)
 function createApiRouter(version) {
@@ -164,6 +222,9 @@ function createApiRouter(version) {
         '/files',
         '/users',
         '/auth',
+        '/profile',
+        '/stats',
+        '/activity/recent',
         '/gdrive',
         '/email'
       ]
@@ -194,8 +255,16 @@ function createApiRouter(version) {
       _limit,
       _sort,
       _order,
-      q
+      q,
+      status,
+      mine
     } = req.query
+
+    // ?mine=true — явный запрос «только мои». Права от этого не расширяются:
+    // видимость уже ограничена visibleTo; для админа это фильтр по его id, для user — «как есть».
+    if (mine === 'true' && req.authUser.role === 'admin') {
+      items = items.filter(item => item.ownerId != null && Number(item.ownerId) === Number(req.authUser.id))
+    }
 
     // Поиск
     if (q) {
@@ -205,6 +274,12 @@ function createApiRouter(version) {
           String(val).toLowerCase().includes(query)
         )
       )
+    }
+
+    // Фильтр по полю «Статус» (можно несколько через запятую: ?status=активный,новый)
+    if (status) {
+      const wanted = String(status).split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+      items = items.filter(item => wanted.includes(String(item['Статус'] ?? '').toLowerCase()))
     }
 
     // Фильтрация по конкретной дате добавления
@@ -229,13 +304,32 @@ function createApiRouter(version) {
       })
     }
 
-    // Сортировка
+    // Сортировка по нескольким полям: ?_sort=Статус,Имя&_order=asc,desc
+    // Если _order короче _sort — недостающие поля сортируются по возрастанию.
     if (_sort) {
-      const order = _order === 'desc' ? -1 : 1
+      const sortFields = String(_sort).split(',').map(s => s.trim()).filter(Boolean)
+      const orders = String(_order || '').split(',').map(s => s.trim().toLowerCase())
+
+      // Сравнение: числа — численно, ISO-даты — как строки, пустые значения в конце
+      const compareValues = (valA, valB) => {
+        const emptyA = valA === undefined || valA === null || valA === ''
+        const emptyB = valB === undefined || valB === null || valB === ''
+        if (emptyA && emptyB) return 0
+        if (emptyA) return 1
+        if (emptyB) return -1
+        const numA = Number(valA)
+        const numB = Number(valB)
+        if (!Number.isNaN(numA) && !Number.isNaN(numB)) return numA - numB
+        return String(valA).localeCompare(String(valB), 'ru')
+      }
+
       items.sort((a, b) => {
-        const valA = a[_sort] || ''
-        const valB = b[_sort] || ''
-        return String(valA).localeCompare(String(valB), 'ru') * order
+        for (let i = 0; i < sortFields.length; i++) {
+          const order = orders[i] === 'desc' ? -1 : 1
+          const result = compareValues(a[sortFields[i]], b[sortFields[i]])
+          if (result !== 0) return result * order
+        }
+        return 0
       })
     }
 
@@ -341,6 +435,86 @@ function createApiRouter(version) {
     res.json({ success: true, message: 'Запись успешно удалена', deletedItem })
   })
 
+  // POST /api/v*/data/:id/duplicate — копия СВОЕЙ записи (для демонстрации CRUD)
+  // Копируется только пользовательские поля; id и владелец выставляются заново.
+  router.post('/data/:id/duplicate', requireAuth, (req, res) => {
+    const db = readDb()
+    db.data = db.data || []
+    const id = req.params.id
+    const source = db.data.find(d => d.id == id)
+
+    if (!source) {
+      return res.status(404).json({ error: 'Запись не найдена' })
+    }
+
+    if (!canTouch(req, source)) {
+      return res.status(403).json({ error: 'Можно копировать только свои записи' })
+    }
+
+    const now = new Date().toISOString()
+    const copy = {
+      ...source,
+      id: Date.now(),
+      ownerId: req.authUser.id,
+      ownerName: req.authUser.name,
+      createdAt: now,
+      updatedAt: now,
+      duplicatedFrom: source.id
+    }
+
+    db.data.push(copy)
+    writeDb(db)
+    res.status(201).json(copy)
+  })
+
+  // POST /api/v*/data/import — массовый импорт из Excel-дампа: { items: [...] }
+  // Владелец импортированных записей — текущий пользователь, id и createdAt генерируются.
+  router.post('/data/import', requireAuth, (req, res) => {
+    const db = readDb()
+    db.data = db.data || []
+
+    const incoming = req.body ? req.body.items : null
+    if (!Array.isArray(incoming)) {
+      return res.status(400).json({ error: 'Ожидается тело вида { items: [...] }' })
+    }
+    if (incoming.length > IMPORT_LIMIT) {
+      return res.status(413).json({ error: `Слишком много записей: ${incoming.length}. Максимум ${IMPORT_LIMIT} за один импорт` })
+    }
+
+    const now = Date.now()
+    let inserted = 0
+    let skipped = 0
+
+    incoming.forEach((item, i) => {
+      // Пропускаем мусор и пустые строки Excel
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        skipped++
+        return
+      }
+      const values = Object.values(item)
+      if (values.length === 0 || values.every(v => v === null || v === undefined || String(v).trim() === '')) {
+        skipped++
+        return
+      }
+
+      // Служебные поля клиента перекрываем своими: владельца подменить нельзя
+      const { id: _clientId, ownerId: _clientOwner, ownerName: _clientOwnerName, createdAt: _clientCreatedAt, ...fields } = item
+
+      db.data.push({
+        ...fields,
+        id: now + i,
+        ownerId: req.authUser.id,
+        ownerName: req.authUser.name,
+        createdAt: new Date(now).toISOString(),
+        source: 'Excel Import'
+      })
+      inserted++
+    })
+
+    writeDb(db)
+    res.status(201).json({ inserted, skipped, total: db.data.length })
+  })
+
   // ==========================================
   // ТАБЛИЦА LOG (Задание 2: история действий)
   // ==========================================
@@ -388,6 +562,154 @@ function createApiRouter(version) {
     db.logs = []
     writeDb(db)
     res.json({ success: true, message: 'Логи очищены' })
+  })
+
+  // GET /api/v*/activity/recent — последние 10 действий текущего пользователя (виджет на главной)
+  // Только свои логи: visibleTo сам отсекает чужие записи для роли user.
+  router.get('/activity/recent', requireAuth, (req, res) => {
+    const db = readDb()
+    const limit = Math.min(Math.max(parseInt(req.query._limit, 10) || 10, 1), 50)
+
+    const logs = visibleTo(req, db.logs || [])
+      .slice()
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, limit)
+      .map(l => ({
+        id: l.id,
+        action: l.action,
+        entityType: l.entityType,
+        createdAt: l.createdAt
+      }))
+
+    res.json(logs)
+  })
+
+  // ==========================================
+  // ЛИЧНЫЙ КАБИНЕТ: профиль, статистика
+  // ==========================================
+
+  // GET /api/v*/profile — текущий пользователь + сводка по его данным
+  router.get('/profile', requireAuth, (req, res) => {
+    const db = readDb()
+    // Считаем только то, что пользователю и так видно (для user это его записи целиком)
+    const records = visibleTo(req, db.data || []).length
+    const files = visibleTo(req, db.files || []).length
+    const actions = visibleTo(req, db.logs || []).length
+
+    res.json({
+      ...req.authUser.profile,
+      isAdmin: req.authUser.role === 'admin',
+      stats: { records, files, actions }
+    })
+  })
+
+  // PUT /api/v*/profile — правка собственного профиля
+  // Менять можно ТОЛЬКО имя и (опционально) пароль; email, роль и курс — нет.
+  router.put('/profile', requireAuth, (req, res) => {
+    const body = req.body || {}
+
+    if (body.email !== undefined) {
+      return res.status(400).json({ error: 'Email менять нельзя — обратитесь к администратору' })
+    }
+    if (body.role !== undefined) {
+      return res.status(400).json({ error: 'Роль менять нельзя — это делает только администратор' })
+    }
+
+    const db = readDb()
+    db.users = db.users || []
+    const user = db.users.find(u => Number(u.id) === Number(req.authUser.id))
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' })
+    }
+
+    if (body.name !== undefined) {
+      const name = String(body.name).trim()
+      if (name.length < 2) {
+        return res.status(400).json({ error: 'Имя должно содержать минимум 2 символа' })
+      }
+      if (name.length > 100) {
+        return res.status(400).json({ error: 'Имя слишком длинное (максимум 100 символов)' })
+      }
+      user.name = name
+    }
+
+    // Смена пароля — только по текущему паролю
+    if (body.password !== undefined && body.password !== '') {
+      if (!body.currentPassword) {
+        return res.status(400).json({ error: 'Для смены пароля укажите currentPassword' })
+      }
+      if (String(body.currentPassword) !== String(user.password)) {
+        return res.status(400).json({ error: 'Текущий пароль указан неверно' })
+      }
+      if (String(body.password).length < 6) {
+        return res.status(400).json({ error: 'Новый пароль должен содержать минимум 6 символов' })
+      }
+      user.password = String(body.password)
+    }
+
+    user.updatedAt = new Date().toISOString()
+    writeDb(db)
+
+    res.json({
+      success: true,
+      message: 'Профиль обновлён',
+      user: publicProfile(user)
+    })
+  })
+
+  // GET /api/v*/stats — аналитика по СВОИМ данным (владелец — текущий пользователь)
+  router.get('/stats', requireAuth, (req, res) => {
+    const db = readDb()
+    const ownerId = req.authUser.id
+
+    // Считаем строго по ownerId, а не как админ по всей БД:
+    // иначе админ получил бы «персональную» статистику по чужим записям.
+    const ownData = (db.data || []).filter(d => d && d.ownerId != null && Number(d.ownerId) === Number(ownerId))
+    const ownFiles = (db.files || []).filter(f => f && f.ownerId != null && Number(f.ownerId) === Number(ownerId))
+    const ownLogs = (db.logs || []).filter(l => l && l.ownerId != null && Number(l.ownerId) === Number(ownerId))
+
+    // Разбивка по статусу
+    const byStatus = {}
+    ownData.forEach(item => {
+      const key = item['Статус'] == null || item['Статус'] === '' ? 'Без статуса' : String(item['Статус'])
+      byStatus[key] = (byStatus[key] || 0) + 1
+    })
+
+    // Создано за последние 7 / 30 дней
+    const now = Date.now()
+    const createdLast = {}
+    STATS_WINDOWS.forEach(days => {
+      const since = now - days * 24 * 60 * 60 * 1000
+      createdLast[days] = ownData.filter(item => {
+        const t = new Date(item.createdAt).getTime()
+        return !Number.isNaN(t) && t >= since
+      }).length
+    })
+
+    // Файлы по хранилищу
+    const filesByStorage = { local: 0, gdrive: 0 }
+    ownFiles.forEach(f => {
+      const key = f.storage === 'gdrive' ? 'gdrive' : 'local'
+      filesByStorage[key] = (filesByStorage[key] || 0) + 1
+    })
+
+    // Действия по типу — из собственных логов
+    const actionsByType = {}
+    ownLogs.forEach(l => {
+      const key = l.action || 'UNKNOWN'
+      actionsByType[key] = (actionsByType[key] || 0) + 1
+    })
+
+    res.json({
+      userId: ownerId,
+      totalRecords: ownData.length,
+      totalFiles: ownFiles.length,
+      totalActions: ownLogs.length,
+      byStatus,
+      createdLast,
+      filesByStorage,
+      actionsByType
+    })
   })
 
   // ==========================================
@@ -567,26 +889,48 @@ function createApiRouter(version) {
       name: user.name,
       email: user.email,
       role: user.role || 'user',
-      token: `jwt_token_${user.id}_${Date.now()}`
+      course: user.course ?? null,
+      token: issueToken(user.id)
     })
   })
 
   // POST /api/v*/auth/register
   router.post('/auth/register', (req, res) => {
-    const { name, email, password } = req.body
+    const { name, email, password, course } = req.body
     const db = readDb()
     db.users = db.users || []
 
-    if (db.users.some(u => u.email === email)) {
+    if (!name || String(name).trim().length < 2) {
+      return res.status(400).json({ error: 'Укажите имя (минимум 2 символа)' })
+    }
+    if (!email || !String(email).includes('@')) {
+      return res.status(400).json({ error: 'Укажите корректный email' })
+    }
+    if (!password || String(password).length < 6) {
+      return res.status(400).json({ error: 'Пароль должен содержать минимум 6 символов' })
+    }
+
+    // Курс необязателен, но если передан — только 1–4
+    let userCourse = null
+    if (course !== undefined && course !== null && String(course).trim() !== '') {
+      const num = Number(course)
+      if (![1, 2, 3, 4].includes(num)) {
+        return res.status(400).json({ error: 'Курс должен быть числом от 1 до 4' })
+      }
+      userCourse = num
+    }
+
+    if (db.users.some(u => u && String(u.email || '').toLowerCase().trim() === String(email).toLowerCase().trim())) {
       return res.status(400).json({ error: 'Пользователь с таким email уже зарегистрирован' })
     }
 
     const newUser = {
       id: Date.now(),
-      name,
+      name: String(name).trim(),
       email,
       password,
       role: 'user',
+      course: userCourse,
       createdAt: new Date().toISOString()
     }
 
@@ -598,7 +942,8 @@ function createApiRouter(version) {
       name: newUser.name,
       email: newUser.email,
       role: newUser.role,
-      token: `jwt_token_${newUser.id}_${Date.now()}`
+      course: newUser.course,
+      token: issueToken(newUser.id)
     })
   })
 
@@ -709,20 +1054,22 @@ function createApiRouter(version) {
 app.use('/api/v1', createApiRouter('v1'))
 app.use('/api/v2', createApiRouter('v2'))
 
-// Локальный dev-сервер: раздаём собранный фронтенд (npm run build) и SPA-fallback.
-// /api/* при этом обслуживают маршруты выше.
-if (fs.existsSync(path.join(__dirname, 'dist'))) {
-  app.use(express.static(path.join(__dirname, 'dist')))
-  app.get(/^\/(?!api\/).*/, (req, res, next) => {
-    if (req.method !== 'GET') return next()
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'))
-  })
-}
-
 // Healthcheck
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() })
 })
+
+// Локальный dev-сервер: раздаём собранный фронтенд (npm run build) и SPA-fallback.
+// Стоит ПОСЛЕ всех API-маршрутов, иначе перехватил бы /api/*.
+// Отдаём только файл из dist — путь не собирается из req.path, обход каталога невозможен.
+const DIST_DIR = path.join(__dirname, 'dist')
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR, { index: false }))
+  app.get(/^\/(?!api\/).*/, (req, res, next) => {
+    if (req.method !== 'GET') return next()
+    res.sendFile(path.join(DIST_DIR, 'index.html'))
+  })
+}
 
 const server = app.listen(PORT, () => {
   console.log(`===============================================`)

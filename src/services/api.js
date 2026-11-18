@@ -170,6 +170,62 @@ export const dataApi = {
       })
     }
   },
+
+  // POST — копия своей записи (сервер ставит владельцем текущего пользователя)
+  async duplicate(id) {
+    try {
+      const res = await api.post(`/data/${id}/duplicate`)
+      const items = JSON.parse(localStorage.getItem('excelData') || '[]')
+      items.push(res.data)
+      localStorage.setItem('excelData', JSON.stringify(items))
+      return res.data
+    } catch {
+      return localFallback(() => {
+        const items = JSON.parse(localStorage.getItem('excelData') || '[]')
+        const source = items.find(i => i.id == id)
+        // Оригинал не найден — дублировать нечего
+        if (!source) throw new Error('Запись не найдена')
+        const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...payload } = source
+        const copy = { ...payload, id: Date.now(), createdAt: new Date().toISOString() }
+        items.push(copy)
+        localStorage.setItem('excelData', JSON.stringify(items))
+        return copy
+      })
+    }
+  },
+
+  // POST — массовый импорт записей из разобранного Excel-файла
+  async importItems(items) {
+    try {
+      const res = await api.post('/data/import', { items })
+      return res.data
+    } catch {
+      return localFallback(() => {
+        const stored = JSON.parse(localStorage.getItem('excelData') || '[]')
+        let inserted = 0
+        let skipped = 0
+        const now = Date.now()
+        ;(Array.isArray(items) ? items : []).forEach((raw, idx) => {
+          const row = raw && typeof raw === 'object' ? raw : null
+          if (!row || Object.keys(row).length === 0) {
+            skipped++
+            return
+          }
+          const isDuplicate = stored.some(i =>
+            Object.keys(row).every(k => JSON.stringify(i[k]) === JSON.stringify(row[k]))
+          )
+          if (isDuplicate) {
+            skipped++
+            return
+          }
+          stored.push({ ...row, id: now + idx, createdAt: new Date().toISOString() })
+          inserted++
+        })
+        localStorage.setItem('excelData', JSON.stringify(stored))
+        return { inserted, skipped }
+      })
+    }
+  },
 }
 
 // ==========================================
@@ -397,7 +453,8 @@ export const authApi = {
           email: user.email,
           role: 'user',
           offline: true,
-          token: `jwt_token_${user.id}_${Date.now()}`,
+          // Не jwt_token_*: сервер такой префикс не примет, офлайн-сессия не даёт API-доступа
+          token: `local_offline_${crypto.randomUUID()}`,
         }
       })
       return offlineUser
@@ -407,7 +464,8 @@ export const authApi = {
   async logout() {
     try {
       const user = JSON.parse(localStorage.getItem('user') || 'null')
-      if (user?.token) {
+      // Офлайн-токен серверу неизвестен — отправлять нечего
+      if (user?.token && user.token.startsWith('jwt_token_')) {
         await api.post('/auth/logout', { token: user.token })
       }
     } catch (e) {
@@ -445,4 +503,127 @@ export const authApi = {
       return localFallback(() => ({ success: true, message: `Инструкция отправлена на ${email}` }))
     }
   },
+
+  // GET — профиль текущего пользователя (с сервера, тело ответа обновляет localStorage ниже)
+  async getProfile() {
+    try {
+      const res = await api.get('/profile')
+      return res.data
+    } catch {
+      return localFallback(() => buildOfflineProfile())
+    }
+  },
+
+  // PUT — изменение имени / пароля (email и роль менять нельзя, 400 от сервера)
+  async updateProfile(data) {
+    try {
+      const res = await api.put('/profile', data)
+      return res.data
+    } catch (err) {
+      // Валидационные ошибки сервера (400) пробрасываем, а не маскируем офлайн-режимом
+      if (err.response?.status === 400) {
+        throw new Error(err.response.data?.error || 'Некорректные данные профиля')
+      }
+      return localFallback(() => {
+        const users = JSON.parse(localStorage.getItem('users') || '[]')
+        const session = JSON.parse(localStorage.getItem('user') || 'null')
+        const user = users.find(u => u.id == session?.id)
+        if (!user) throw new Error('Пользователь не найден')
+        const { name, password, currentPassword } = data || {}
+        if (password) {
+          if (!currentPassword || user.password !== currentPassword) {
+            throw new Error('Неверный текущий пароль')
+          }
+          user.password = password
+        }
+        if (name) user.name = name
+        localStorage.setItem('users', JSON.stringify(users))
+        if (session && name) {
+          localStorage.setItem('user', JSON.stringify({ ...session, name }))
+        }
+        return buildOfflineProfile()
+      })
+    }
+  },
+
+  // GET — агрегированная статистика по данным текущего пользователя
+  async getStats() {
+    try {
+      const res = await api.get('/stats')
+      return res.data
+    } catch {
+      return localFallback(() => buildOfflineStats())
+    }
+  },
+
+  // GET — последние действия текущего пользователя
+  async getRecentActivity() {
+    try {
+      const res = await api.get('/activity/recent')
+      return res.data
+    } catch {
+      return localFallback(() => {
+        const session = JSON.parse(localStorage.getItem('user') || 'null')
+        const logs = JSON.parse(localStorage.getItem('logs') || '[]')
+        return logs
+          .filter(l => !session || l.userId == null || l.userId == session.id)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 10)
+      })
+    }
+  },
+}
+
+// Офлайн-профиль собирается из localStorage той же формы, что отдаёт GET /profile
+function buildOfflineProfile() {
+  const session = JSON.parse(localStorage.getItem('user') || 'null')
+  const users = JSON.parse(localStorage.getItem('users') || '[]')
+  const stored = users.find(u => u.id == session?.id) || {}
+  const profile = {
+    id: session?.id ?? stored.id ?? null,
+    name: stored.name || session?.name || '',
+    email: stored.email || session?.email || '',
+    role: session?.role || stored.role || 'user',
+    course: stored.course ?? session?.course ?? null,
+    createdAt: stored.createdAt || null,
+  }
+  const stats = buildOfflineStats()
+  return { ...profile, isAdmin: profile.role === 'admin', stats }
+}
+
+function buildOfflineStats() {
+  const session = JSON.parse(localStorage.getItem('user') || 'null')
+  const mine = (item) => !session || item.userId == null || item.userId == session.id
+  const items = JSON.parse(localStorage.getItem('excelData') || '[]').filter(mine)
+  const files = JSON.parse(localStorage.getItem('uploadedFiles') || '[]').filter(mine)
+  const logs = JSON.parse(localStorage.getItem('logs') || '[]').filter(mine)
+
+  const dayMs = 24 * 60 * 60 * 1000
+  const since = (days) => Date.now() - days * dayMs
+  const isAfter = (item, ts) => item.createdAt && new Date(item.createdAt).getTime() >= ts
+
+  const byStatus = {}
+  items.forEach(i => {
+    const status = i['Статус'] || i.status || 'не указан'
+    byStatus[status] = (byStatus[status] || 0) + 1
+  })
+
+  const filesByStorage = {}
+  files.forEach(f => {
+    const storage = f.storage || 'local'
+    filesByStorage[storage] = (filesByStorage[storage] || 0) + 1
+  })
+
+  const actions = {}
+  logs.forEach(l => {
+    actions[l.action] = (actions[l.action] || 0) + 1
+  })
+
+  return {
+    byStatus,
+    createdLast7: items.filter(i => isAfter(i, since(7))).length,
+    createdLast30: items.filter(i => isAfter(i, since(30))).length,
+    filesByStorage,
+    actions,
+  }
 }

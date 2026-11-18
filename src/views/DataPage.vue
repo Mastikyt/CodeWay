@@ -17,6 +17,17 @@
         <button class="btn btn-outline-primary" @click="exportToExcel">
           📥 Экспорт в Excel
         </button>
+        <button class="btn btn-outline-primary" @click="triggerImport" :disabled="isImporting">
+          <span v-if="isImporting" class="spinner-border spinner-border-sm mr-2" role="status"></span>
+          <span>{{ isImporting ? 'Импорт...' : '📤 Импорт из Excel' }}</span>
+        </button>
+        <input
+          ref="importInput"
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          style="display: none;"
+          @change="handleImportFile"
+        />
         <button class="btn btn-outline-secondary" @click="fetchData" title="Обновить">
           🔄
         </button>
@@ -122,6 +133,9 @@
                 <div class="btn-group btn-group-sm">
                   <button class="btn btn-outline-primary" @click="openEditModal(item)" title="Редактировать">
                     ✏️
+                  </button>
+                  <button class="btn btn-outline-secondary" @click="duplicateItem(item)" title="Дублировать">
+                    ⧉
                   </button>
                   <button class="btn btn-outline-danger" @click="deleteItem(item)" title="Удалить">
                     🗑️
@@ -236,6 +250,8 @@ export default {
       sortDirection: 'asc',
       searchTimer: null,
       notification: null,
+      isImporting: false,
+      duplicatingId: null,
     }
   },
   computed: {
@@ -447,6 +463,72 @@ export default {
         })
       } catch {
         return str
+      }
+    },
+
+    // POST /data/:id/duplicate — копия записи того же пользователя
+    async duplicateItem(item) {
+      if (this.duplicatingId !== null) return
+      this.duplicatingId = item.id
+      try {
+        const copy = await dataApi.duplicate(item.id)
+        await logService.log('CREATE', 'data', copy?.id, null, copy)
+        this.showNotification('Запись продублирована')
+        await this.fetchData()
+      } catch (err) {
+        this.showNotification('Ошибка дублирования: ' + err.message, 'danger')
+      } finally {
+        this.duplicatingId = null
+      }
+    },
+
+    triggerImport() {
+      this.$refs.importInput?.click()
+    },
+
+    // Импорт: xlsx → массив объектов → POST /data/import
+    async handleImportFile(event) {
+      const file = event.target.files?.[0]
+      // Сбрасываем input, чтобы повторный выбор того же файла срабатывал
+      event.target.value = ''
+      if (!file) return
+
+      this.isImporting = true
+      try {
+        const buffer = await file.arrayBuffer()
+        const workbook = XLSX.read(buffer, { type: 'array' })
+        const sheetName = workbook.SheetNames[0]
+        if (!sheetName) throw new Error('В файле нет листов')
+
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+        // Служебные ключи файла не импортируем — id и даты ставит сервер
+        const exclude = ['id', 'createdAt', 'updatedAt', 'userId', 'source']
+        const items = rows
+          .map(row => Object.fromEntries(
+            Object.entries(row).filter(([key]) => !exclude.includes(key))
+          ))
+          .filter(row => Object.values(row).some(v => String(v).trim() !== ''))
+
+        if (items.length === 0) {
+          this.showNotification('В файле нет строк с данными', 'warning')
+          return
+        }
+
+        const result = await dataApi.importItems(items)
+        await logService.log('CREATE', 'data', null, null, {
+          source: file.name,
+          inserted: result?.inserted ?? 0,
+          skipped: result?.skipped ?? 0,
+        })
+        this.showNotification(
+          `Импорт из «${file.name}»: добавлено ${result?.inserted ?? 0}, пропущено ${result?.skipped ?? 0}`
+        )
+        this.currentPage = 1
+        await this.fetchData()
+      } catch (err) {
+        this.showNotification('Ошибка импорта: ' + err.message, 'danger')
+      } finally {
+        this.isImporting = false
       }
     },
 

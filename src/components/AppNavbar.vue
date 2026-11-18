@@ -34,6 +34,9 @@
           <li class="nav-item" v-if="user">
             <router-link class="nav-link" to="/files">Файлы</router-link>
           </li>
+          <li class="nav-item" v-if="user">
+            <router-link class="nav-link" to="/profile">Кабинет</router-link>
+          </li>
           <li class="nav-item" v-if="isAdmin">
             <router-link class="nav-link text-warning" to="/admin">👑 Админ-панель</router-link>
           </li>
@@ -82,6 +85,9 @@
                 <div class="dropdown-divider" style="border-color: var(--border-subtle);"></div>
                 <router-link class="dropdown-item" to="/data" style="color: var(--text-secondary);">
                   📊 Мои данные
+                </router-link>
+                <router-link class="dropdown-item" to="/profile" style="color: var(--text-secondary);">
+                  👤 Кабинет
                 </router-link>
                 <router-link v-if="isAdmin" class="dropdown-item text-warning" to="/admin">
                   👑 Панель управления
