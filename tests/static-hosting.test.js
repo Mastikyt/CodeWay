@@ -38,14 +38,19 @@ test('home page renders AdSlot after the hero and before the upload section', ()
   assert.ok(heroEnd !== -1 && adSlotPosition > heroEnd && adSlotPosition < uploadStart)
 })
 
-test('Cloudflare redirects preserve the two SPA entry points', () => {
+test('Cloudflare redirects route the Tailwind entry, SPA fallback lives in wrangler.jsonc', () => {
   const path = new URL('../public/_redirects', import.meta.url)
   assert.ok(existsSync(path), 'public/_redirects must exist')
   const lines = read('public/_redirects').split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
   assert.ok(lines.some((line) => /^\/tailwind\s+\/tailwind\.html\s+200$/.test(line)))
   assert.ok(lines.some((line) => /^\/tailwind\/\*\s+\/tailwind\.html\s+200$/.test(line)))
-  assert.ok(lines.some((line) => /^\/\*\s+\/index\.html\s+200$/.test(line)))
-  assert.ok(lines.indexOf('/tailwind /tailwind.html 200') < lines.indexOf('/* /index.html 200'))
+  // Workers Static Assets rejects a catch-all `/* /index.html 200` as an infinite
+  // loop, so the main-app fallback must be not_found_handling instead.
+  assert.ok(!lines.some((line) => /^\/\*\s+\/index\.html\s+200$/.test(line)))
+
+  const wrangler = read('wrangler.jsonc')
+  assert.match(wrangler, /"not_found_handling":\s*"single-page-application"/)
+  assert.match(wrangler, /"directory":\s*"\.\/dist"/)
 })
 
 test('hosting report covers the requested providers, comparison criteria, and sources', () => {
