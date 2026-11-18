@@ -52,22 +52,23 @@
         </div>
       </div>
 
-      <!-- Выпадающее меню (мобильные) -->
-      <ul
-        class="grid max-h-0 overflow-hidden border-t border-transparent pr-0 transition-[max-height,border-color] duration-300 ease-out peer-checked:max-h-80 peer-checked:border-line md:hidden dark:peer-checked:border-white/10"
-        aria-label="Мобильное меню"
-      >
-        <li v-for="item in items" :key="`m-${item}`" class="border-b border-line/60 last:border-0 dark:border-white/5">
-          <a
-            href="#demo-nav-toggle"
-            class="block px-4 py-3 text-sm font-medium text-ink-muted transition hover:bg-brand-50 hover:text-brand-700 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
-            @click="active = item"
-          >
-            {{ item }}
-          </a>
-        </li>
-      </ul>
     </nav>
+
+    <!-- Выпадающее меню — сосед peer-чекбокса, иначе peer-checked не срабатывает -->
+    <ul
+      class="grid max-h-0 overflow-hidden border-t border-transparent bg-surface/95 pr-0 backdrop-blur-md transition-[max-height,border-color] duration-300 ease-out peer-checked:max-h-80 peer-checked:border-line md:hidden dark:bg-slate-900/95 dark:peer-checked:border-white/10"
+      aria-label="Мобильное меню"
+    >
+      <li v-for="item in items" :key="`m-${item}`" class="border-b border-line/60 last:border-0 dark:border-white/5">
+        <a
+          href="#demo-nav-toggle"
+          class="block px-4 py-3 text-sm font-medium text-ink-muted transition hover:bg-brand-50 hover:text-brand-700 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+          @click="active = item"
+        >
+          {{ item }}
+        </a>
+      </li>
+    </ul>
   </div>
 </template>
 
