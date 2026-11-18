@@ -45,6 +45,13 @@
       "ownerName": "Студент (Минск)",
       "createdAt": "2026-11-18T08:19:43.765Z",
       "source": "Excel Import"
+    },
+    {
+      "id": 1794990120912,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:22:00.912Z",
+      "source": "Excel Import"
     }
   ],
   "logs": [
