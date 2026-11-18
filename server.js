@@ -60,6 +60,33 @@ function writeDb(db) {
 // Токен — не настоящий JWT (учебный проект), но теперь он проверяется:
 // формат jwt_token_<userId>_<timestamp>, userId должен совпадать с записью в БД.
 
+// Служебные поля, которые клиент не может задать при импорте/дублировании
+const PROTECTED_FIELDS = ['id', 'ownerId', 'ownerName', 'createdAt', 'updatedAt', '__proto__', 'constructor', 'prototype']
+// В кириллицу \w не попадает, поэтому явно разрешаем буквы любого алфавита
+const SAFE_FIELD_KEY = /^[\p{L}\p{N}_\s\-.(),/№]{1,64}$/u
+
+// Отбирает из клиентского объекта только безопасные пользовательские поля.
+// Защищает от prototype pollution (__proto__/constructor как ключи) и от подмены служебных полей.
+function pickUserFields(item) {
+  const fields = {}
+  for (const [rawKey, value] of Object.entries(item)) {
+    const key = String(rawKey)
+    if (PROTECTED_FIELDS.includes(key)) continue
+    if (!SAFE_FIELD_KEY.test(key)) continue
+    // Вложенные объекты не нужны: приводим к строке, чтобы не тащить в БД чужие структуры
+    fields[key] = value !== null && typeof value === 'object' ? String(value) : value
+  }
+  return fields
+}
+
+// Сравнение строк за постоянное время (чтобы пароль нельзя было подобрать по таймингам)
+function safeEqualStrings(a, b) {
+  // Сравниваем хеши фиксированной длины — длина самих строк не утекает
+  const ha = crypto.createHash('sha256').update(a).digest()
+  const hb = crypto.createHash('sha256').update(b).digest()
+  return crypto.timingSafeEqual(ha, hb)
+}
+
 // Отозванные токены (хранятся в памяти сервера до перезапуска)
 const revokedTokens = new Set()
 
@@ -67,10 +94,16 @@ const revokedTokens = new Set()
 // При генерации все ранее выданные токены становятся невалидными (сессия переживёт только до рестарта).
 const TOKEN_SECRET = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex')
 if (!process.env.TOKEN_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    // В production случайный ключ означал бы, что сессии живут только до рестарта
+    throw new Error('TOKEN_SECRET обязателен при NODE_ENV=production')
+  }
   console.warn('⚠️  TOKEN_SECRET не задан — используется случайный ключ на время работы сервера')
 }
 
 // Подпись токена: HMAC-SHA256 по строке "<userId>.<timestamp>"
+const TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+
 function signToken(userId, ts) {
   return crypto.createHmac('sha256', TOKEN_SECRET).update(`${userId}.${ts}`).digest('base64url')
 }
@@ -94,6 +127,10 @@ function parseToken(req) {
   const b = Buffer.from(signature)
   // Сравнение с постоянным временем — иначе подпись подбирается по таймингам
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null
+
+  // Срок жизни токена: 7 суток
+  const issuedAt = Number(ts)
+  if (!Number.isFinite(issuedAt) || Date.now() - issuedAt > TOKEN_MAX_AGE_MS) return null
 
   return { id: Number(id) }
 }
@@ -452,8 +489,10 @@ function createApiRouter(version) {
     }
 
     const now = new Date().toISOString()
+    // Копируем только пользовательские поля: source/duplicatedFrom не переносим,
+    // иначе копия унаследует пометки происхождения исходной записи.
     const copy = {
-      ...source,
+      ...pickUserFields(source),
       id: Date.now(),
       ownerId: req.authUser.id,
       ownerName: req.authUser.name,
@@ -497,8 +536,9 @@ function createApiRouter(version) {
         return
       }
 
-      // Служебные поля клиента перекрываем своими: владельца подменить нельзя
-      const { id: _clientId, ownerId: _clientOwner, ownerName: _clientOwnerName, createdAt: _clientCreatedAt, ...fields } = item
+      // Служебные поля и опасные ключи (__proto__ и т.п.) отбрасываются в pickUserFields:
+      // владельца и id подменить нельзя
+      const fields = pickUserFields(item)
 
       db.data.push({
         ...fields,
@@ -638,7 +678,7 @@ function createApiRouter(version) {
       if (!body.currentPassword) {
         return res.status(400).json({ error: 'Для смены пароля укажите currentPassword' })
       }
-      if (String(body.currentPassword) !== String(user.password)) {
+      if (!safeEqualStrings(String(body.currentPassword), String(user.password))) {
         return res.status(400).json({ error: 'Текущий пароль указан неверно' })
       }
       if (String(body.password).length < 6) {
