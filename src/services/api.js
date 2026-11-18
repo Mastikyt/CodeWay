@@ -370,7 +370,10 @@ export const authApi = {
       if (err.response?.status === 401 || err.response?.data?.error) {
         throw new Error(err.response.data.error || 'Неверный email или пароль')
       }
-      return localFallback(() => {
+
+      // Сервер недоступен — офлайн-режим на localStorage.
+      // Роль понижается до 'user': без сервера права нельзя ни подтвердить, ни проверить.
+      const offlineUser = await localFallback(() => {
         let users = JSON.parse(localStorage.getItem('users') || '[]')
         if (users.length === 0) {
           users = [
@@ -392,10 +395,23 @@ export const authApi = {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role || 'user',
-          token: `token_${Date.now()}`,
+          role: 'user',
+          offline: true,
+          token: `jwt_token_${user.id}_${Date.now()}`,
         }
       })
+      return offlineUser
+    }
+  },
+  // Выход — инвалидирует токен на сервере
+  async logout() {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || 'null')
+      if (user?.token) {
+        await api.post('/auth/logout', { token: user.token })
+      }
+    } catch (e) {
+      // Молча: локальный выход всё равно произойдёт
     }
   },
   async register(userData) {

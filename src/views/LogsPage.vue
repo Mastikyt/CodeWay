@@ -69,7 +69,9 @@
               </td>
             </tr>
             <tr v-for="(log, index) in paginatedLogs" :key="log.id">
-              <td style="color: var(--text-muted); font-size: 13px;">{{ index + 1 }}</td>
+              <td style="color: var(--text-muted); font-size: 13px;">
+                {{ (currentPage - 1) * perPage + index + 1 }}
+              </td>
               <td>
                 <span class="badge" :class="actionBadgeClass(log.action)">
                   {{ actionLabel(log.action) }}
@@ -100,25 +102,36 @@
       </div>
     </div>
 
-    <!-- Пагинация -->
-    <nav class="mt-4" v-if="totalPages > 1">
-      <ul class="pagination justify-content-center">
-        <li class="page-item" :class="{ disabled: currentPage === 1 }">
-          <a class="page-link" href="#" @click.prevent="currentPage--">«</a>
-        </li>
-        <li
-          class="page-item"
-          v-for="page in totalPages"
-          :key="page"
-          :class="{ active: page === currentPage }"
-        >
-          <a class="page-link" href="#" @click.prevent="currentPage = page">{{ page }}</a>
-        </li>
-        <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-          <a class="page-link" href="#" @click.prevent="currentPage++">»</a>
-        </li>
-      </ul>
-    </nav>
+    <!-- Пагинация: окно из 5 страниц, а не ссылка на каждую запись -->
+    <div
+      class="d-flex flex-wrap justify-content-between align-items-center mt-4"
+      v-if="filteredLogs.length > 0"
+    >
+      <small style="color: var(--text-muted);">
+        Показано {{ (currentPage - 1) * perPage + 1 }}–{{
+          Math.min(currentPage * perPage, filteredLogs.length)
+        }}
+        из {{ filteredLogs.length }}
+      </small>
+      <nav aria-label="Пагинация журнала" v-if="totalPages > 1">
+        <ul class="pagination mb-0">
+          <li class="page-item" :class="{ disabled: currentPage === 1 }">
+            <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">« Назад</a>
+          </li>
+          <li
+            class="page-item"
+            v-for="page in visiblePages"
+            :key="page"
+            :class="{ active: page === currentPage }"
+          >
+            <a class="page-link" href="#" @click.prevent="goToPage(page)">{{ page }}</a>
+          </li>
+          <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+            <a class="page-link" href="#" @click.prevent="goToPage(currentPage + 1)">Вперед »</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
 
     <!-- Модальное окно сравнения JSON (vue-json-compare) -->
     <ModalDialog
@@ -184,12 +197,28 @@ export default {
       return data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     },
     totalPages() {
-      return Math.ceil(this.filteredLogs.length / this.perPage)
+      return Math.max(1, Math.ceil(this.filteredLogs.length / this.perPage))
+    },
+    visiblePages() {
+      const pages = []
+      const count = Math.min(5, this.totalPages)
+      let start = Math.max(1, this.currentPage - 2)
+      const end = Math.min(this.totalPages, start + count - 1)
+      start = Math.max(1, end - count + 1)
+      for (let i = start; i <= end; i++) pages.push(i)
+      return pages
     },
     paginatedLogs() {
       const start = (this.currentPage - 1) * this.perPage
       return this.filteredLogs.slice(start, start + this.perPage)
     },
+  },
+  watch: {
+    // Сброс на первую страницу, когда фильтр уменьшает список
+    filterAction() { this.currentPage = 1 },
+    filterEntity() { this.currentPage = 1 },
+    dateFrom() { this.currentPage = 1 },
+    dateTo() { this.currentPage = 1 },
   },
   mounted() {
     this.loadLogs()
@@ -210,6 +239,10 @@ export default {
       } finally {
         this.isLoading = false
       }
+    },
+    goToPage(page) {
+      if (page < 1 || page > this.totalPages) return
+      this.currentPage = page
     },
     async clearLogs() {
       if (confirm('Вы уверены, что хотите очистить все логи?')) {

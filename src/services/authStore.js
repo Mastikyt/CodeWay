@@ -37,7 +37,13 @@ export const authStore = {
     return userData
   },
   // Выход
-  logout() {
+  async logout() {
+    try {
+      // Сервер инвалидирует токен — после выхода им нельзя продолжить пользоваться
+      await authApi.logout()
+    } catch (e) {
+      // Если сервер недоступен, всё равно выходим локально
+    }
     state.user = null
     localStorage.removeItem('user')
   },

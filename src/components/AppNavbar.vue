@@ -113,8 +113,9 @@ export default {
     },
   },
   methods: {
-    logout() {
-      authStore.logout()
+    async logout() {
+      // Сообщаем серверу, что сессия закрыта: токен после этого перестаёт действовать
+      await authStore.logout()
       this.$router.push('/login')
     },
   },
