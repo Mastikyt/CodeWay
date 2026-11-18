@@ -52,6 +52,69 @@
       "ownerName": "Студент (Минск)",
       "createdAt": "2026-11-18T08:22:00.912Z",
       "source": "Excel Import"
+    },
+    {
+      "Имя": "Проверка",
+      "Статус": "новый",
+      "id": 1794990211178,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:23:31.178Z",
+      "source": "Excel Import"
+    },
+    {
+      "id": 1794990228349,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:23:48.349Z",
+      "source": "Excel Import"
+    },
+    {
+      "Имя": "Проверка",
+      "Статус": "новый",
+      "source": "Excel Import",
+      "id": 1794990228646,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:23:48.646Z",
+      "updatedAt": "2026-11-18T08:23:48.646Z",
+      "duplicatedFrom": 1794990211178
+    },
+    {
+      "id": 1794990324490,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:25:24.490Z",
+      "source": "Excel Import"
+    },
+    {
+      "id": 1794990376126,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:26:16.126Z",
+      "source": "Excel Import"
+    },
+    {
+      "id": 1794990376288,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:26:16.288Z",
+      "source": "Excel Import"
+    },
+    {
+      "id": 1794990507317,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:28:27.317Z",
+      "source": "Excel Import"
+    },
+    {
+      "Имя": "Диаг",
+      "id": 1794990552029,
+      "ownerId": 2,
+      "ownerName": "Студент (Минск)",
+      "createdAt": "2026-11-18T08:29:12.029Z",
+      "source": "Excel Import"
     }
   ],
   "logs": [
