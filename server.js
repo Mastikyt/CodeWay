@@ -479,11 +479,31 @@ function createApiRouter(version) {
     res.json({ success: true, message: `Инструкция по сбросу пароля отправлена на ${email}` })
   })
 
-  // GET /api/v*/users — получение пользователей
+  const isRealUser = (u) => {
+    if (!u || typeof u !== 'object') return false
+    return String(u.name || '').trim().length > 0 && String(u.email || '').trim().length > 0
+  }
+
+  // GET /api/v*/users — только реальные учётные записи, без пустых объектов
   router.get('/users', (req, res) => {
     const db = readDb()
-    const safeUsers = (db.users || []).map(({ password, ...u }) => u)
+    const safeUsers = (db.users || [])
+      .filter(isRealUser)
+      .map(({ password, ...u }) => u)
     res.json(safeUsers)
+  })
+
+  // DELETE /api/v*/users/purge-empty — вычистить пустые записи (до /users/:id)
+  router.delete('/users/purge-empty', (req, res) => {
+    const db = readDb()
+    const before = (db.users || []).length
+    db.users = (db.users || []).filter(isRealUser)
+    writeDb(db)
+    res.json({
+      success: true,
+      removed: before - db.users.length,
+      total: db.users.length,
+    })
   })
 
   // PUT /api/v*/users/:id/role — установка роли из админки

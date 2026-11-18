@@ -141,56 +141,53 @@
       </div>
     </div>
 
-    <!-- Вкладка: Voyager (BREAD Архитектура) -->
+    <!-- Вкладка: Voyager BREAD — живые таблицы, без dummy-пользователей -->
     <div v-if="activeTab === 'voyager'">
       <div class="card p-4" style="border-radius: 16px;">
-        <div class="d-flex align-items-center mb-3">
-          <div style="font-size: 36px; margin-right: 14px;">🧭</div>
+        <div class="d-flex align-items-center justify-content-between mb-3">
           <div>
-            <h4 style="color: var(--text-white); font-weight: 800; margin-bottom: 2px;">
-              Voyager Admin Integration
-            </h4>
-            <span class="badge badge-info">Требование 4: Административная панель Voyager</span>
+            <h4 style="color: var(--text-white); font-weight: 800; margin-bottom: 2px;">Voyager Admin</h4>
+            <small style="color: var(--text-muted);">BREAD по реальным таблицам. Пустые пользователи не показываются и удаляются.</small>
           </div>
+          <button class="btn btn-outline-danger btn-sm" @click="purgeEmptyUsers">Удалить пустые записи</button>
         </div>
 
-        <div class="alert alert-info">
-          <strong>ℹ️ Правило установки:</strong> Тестовые данные при установке не добавлять. В Laravel Voyager устанавливается командой <code>php artisan voyager:install</code> <strong>без</strong> флага <code>--with-dummy</code>.
-        </div>
-
-        <h6 style="color: var(--text-white); font-weight: 700;" class="mt-4 mb-3">Команды установки Voyager в Laravel:</h6>
-        <div style="background: var(--bg-card); border: 1px solid var(--border-bright); border-radius: 12px; padding: 18px; font-family: 'Fira Code', monospace; font-size: 13px;">
-          <p class="mb-1" style="color: var(--text-muted);"># 1. Установка пакета Voyager через Composer:</p>
-          <code style="color: var(--accent-cyan); display: block; margin-bottom: 12px;">composer require tcg/voyager</code>
-
-          <p class="mb-1" style="color: var(--text-muted);"># 2. Установка Voyager БЕЗ тестовых данных (согласно заданию):</p>
-          <code style="color: var(--accent-emerald); display: block; margin-bottom: 12px;">php artisan voyager:install</code>
-
-          <p class="mb-1" style="color: var(--text-muted);"># 3. Создание супер-администратора:</p>
-          <code style="color: var(--accent-cyan); display: block; margin-bottom: 12px;">php artisan voyager:admin admin@codeway.ru --create</code>
-
-          <p class="mb-1" style="color: var(--text-muted);"># 4. Доступ к панели администратора:</p>
-          <code style="color: var(--accent-amber); display: block;">URL: http://localhost:8000/admin</code>
-        </div>
-
-        <h6 style="color: var(--text-white); font-weight: 700;" class="mt-4 mb-3">Спроектированные Voyager BREAD-таблицы:</h6>
         <div class="row">
-          <div class="col-md-4 mb-3" v-for="bread in voyagerBread" :key="bread.name">
-            <div class="card p-3 h-100" style="border-radius: 12px; border-color: var(--border-bright); background: var(--bg-surface);">
-              <div class="d-flex align-items-center mb-2">
-                <span style="font-size: 24px; margin-right: 8px;">{{ bread.icon }}</span>
-                <strong style="color: var(--text-white);">{{ bread.name }}</strong>
-              </div>
-              <small style="color: var(--text-muted);">Таблица: <code>{{ bread.table }}</code></small>
-              <div class="mt-2" style="font-size: 12px; color: var(--accent-cyan);">
-                <strong>BREAD:</strong> {{ bread.ops }}
-              </div>
-              <p class="mt-2 mb-0" style="font-size: 13px; color: var(--text-secondary);">
-                {{ bread.desc }}
-              </p>
-            </div>
+          <div class="col-md-4 mb-3" v-for="bread in voyagerBread" :key="bread.table">
+            <button
+              type="button"
+              class="card p-3 h-100 w-100 text-left"
+              :style="breadTable === bread.table
+                ? 'border-radius: 12px; border-color: var(--accent-cyan); background: var(--bg-surface);'
+                : 'border-radius: 12px; border-color: var(--border-bright); background: var(--bg-surface);'"
+              @click="openBread(bread.table)"
+            >
+              <strong style="color: var(--text-white);">{{ bread.icon }} {{ bread.name }}</strong>
+              <div class="mt-1" style="font-size: 12px; color: var(--accent-cyan);">{{ bread.ops }}</div>
+              <div class="mt-1" style="font-size: 13px; color: var(--text-secondary);">Записей: {{ breadCount(bread.table) }}</div>
+            </button>
           </div>
         </div>
+
+        <div class="table-responsive mt-2" v-if="breadRows.length">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th v-for="col in breadColumns" :key="col">{{ col }}</th>
+                <th v-if="breadTable === 'users'">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in breadRows" :key="row.id || row.email || row.name">
+                <td v-for="col in breadColumns" :key="col" style="font-size: 13px;">{{ cell(row[col]) }}</td>
+                <td v-if="breadTable === 'users'">
+                  <button class="btn btn-outline-danger btn-sm" @click="deleteUser(row)" :disabled="row.role === 'admin'">🗑️</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p v-else class="mb-0 mt-2" style="color: var(--text-muted);">В выбранной таблице нет записей.</p>
       </div>
     </div>
 
@@ -228,7 +225,7 @@
 </template>
 
 <script>
-import { usersApi, setApiVersion } from '../services/api'
+import { usersApi, dataApi, logsApi, filesApi, setApiVersion } from '../services/api'
 import logService from '../services/logService'
 
 export default {
@@ -249,6 +246,11 @@ export default {
         apiVersion: 'v1',
         perPage: 10,
       },
+      breadTable: 'users',
+      breadRows: [],
+      dataRows: [],
+      logRows: [],
+      fileRows: [],
       voyagerBread: [
         { name: 'Пользователи (Users)', icon: '👥', table: 'users', ops: 'Browse, Read, Edit, Add, Delete', desc: 'Управление учетными записями, ролями и доступами' },
         { name: 'Роли (Roles)', icon: '🛡️', table: 'roles', ops: 'Browse, Read, Edit, Add, Delete', desc: 'Настройка прав доступа (admin, moderator, editor, user)' },
@@ -277,19 +279,72 @@ export default {
     logsCount() {
       return JSON.parse(localStorage.getItem('logs') || '[]').length
     },
+    breadColumns() {
+      const row = this.breadRows[0]
+      if (!row) return []
+      return Object.keys(row).filter((key) => key !== 'password').slice(0, 6)
+    },
   },
   mounted() {
     this.loadUsers()
     this.loadSettings()
+    this.loadBreadSources()
   },
   methods: {
     async loadUsers() {
       try {
-        const users = await usersApi.getAll()
-        this.users = users
+        const purged = await usersApi.purgeEmpty()
+        this.users = await usersApi.getAll()
+        if (this.breadTable === 'users') this.breadRows = this.users
+        if (purged?.removed > 0) {
+          this.showNotification(`Удалено пустых пользователей: ${purged.removed}. Осталось ${this.users.length}.`)
+        }
       } catch (err) {
         console.error('Ошибка загрузки пользователей:', err)
       }
+    },
+    async loadBreadSources() {
+      try {
+        const data = await dataApi.getAll()
+        this.dataRows = Array.isArray(data) ? data : (data.items || data.data || [])
+      } catch { this.dataRows = [] }
+      try {
+        const logs = await logsApi.getAll()
+        this.logRows = Array.isArray(logs) ? logs : []
+      } catch { this.logRows = [] }
+      try {
+        const files = await filesApi.getAll()
+        this.fileRows = Array.isArray(files) ? files : (files.items || [])
+      } catch { this.fileRows = [] }
+      this.openBread(this.breadTable)
+    },
+    breadCount(table) {
+      if (table === 'users') return this.users.length
+      if (table === 'roles') return this.availableRoles.length
+      if (table === 'data_records') return this.dataRows.length
+      if (table === 'activity_logs') return this.logRows.length
+      if (table === 'uploaded_files') return this.fileRows.length
+      return 1
+    },
+    openBread(table) {
+      this.breadTable = table
+      if (table === 'users') this.breadRows = this.users
+      else if (table === 'roles') {
+        this.breadRows = this.availableRoles.map((role) => ({ id: role.value, name: role.label, role: role.value }))
+      } else if (table === 'data_records') this.breadRows = this.dataRows
+      else if (table === 'activity_logs') this.breadRows = this.logRows
+      else if (table === 'uploaded_files') this.breadRows = this.fileRows
+      else this.breadRows = [{ id: 1, project: this.settings.projectName, api: this.settings.apiVersion, perPage: this.settings.perPage }]
+    },
+    cell(value) {
+      if (value == null || value === '') return '—'
+      if (typeof value === 'object') return JSON.stringify(value).slice(0, 80)
+      return String(value).slice(0, 80)
+    },
+    async purgeEmptyUsers() {
+      const purged = await usersApi.purgeEmpty()
+      await this.loadUsers()
+      this.showNotification(`Пустые записи удалены: ${purged?.removed || 0}`)
     },
     loadSettings() {
       const saved = JSON.parse(localStorage.getItem('appSettings') || 'null')

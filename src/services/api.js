@@ -290,13 +290,41 @@ export const gdriveApi = {
 // ==========================================
 // 5. USERS & ROLES API (Административная панель Voyager)
 // ==========================================
+function realUsers(raw) {
+  const list = Array.isArray(raw) ? raw : []
+  return list.filter(
+    (u) => u && typeof u === 'object' && String(u.name || '').trim() && String(u.email || '').trim()
+  )
+}
+
 export const usersApi = {
   async getAll() {
     try {
       const res = await api.get('/users')
+      const users = realUsers(res.data)
+      if (Array.isArray(res.data) && res.data.length !== users.length) {
+        api.delete('/users/purge-empty').catch(() => {})
+      }
+      return users
+    } catch {
+      return localFallback(() => {
+        const users = realUsers(JSON.parse(localStorage.getItem('users') || '[]'))
+        localStorage.setItem('users', JSON.stringify(users))
+        return users
+      })
+    }
+  },
+  async purgeEmpty() {
+    try {
+      const res = await api.delete('/users/purge-empty')
       return res.data
     } catch {
-      return localFallback(() => JSON.parse(localStorage.getItem('users') || '[]'))
+      return localFallback(() => {
+        const raw = JSON.parse(localStorage.getItem('users') || '[]')
+        const users = realUsers(raw)
+        localStorage.setItem('users', JSON.stringify(users))
+        return { success: true, removed: (Array.isArray(raw) ? raw.length : 0) - users.length, total: users.length }
+      })
     }
   },
   async updateRole(id, role) {
