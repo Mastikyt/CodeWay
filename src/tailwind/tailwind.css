@@ -1,0 +1,308 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   Tailwind CSS v4 — слой заданий CodeWay
+   В v4 нет tailwind.config.js: токены — в @theme, тёмная тема — @custom-variant,
+   утилиты и «плагины» — в @utility, компоненты — в @layer components.
+   Порядок важен: @utility объявляются до компонентов, которые их используют в @apply.
+
+   Файл подключается в двух местах:
+   • tailwind.html — изолированная витрина /tailwind (свой reset и layout);
+   • main.js — страница /tasks внутри основного приложения CodeWay.
+     Там Tailwind-разметка обёрнута в .tw-layer, а preflight ограничен этим
+     контейнером (см. раздел 5), чтобы не ломать Bootstrap-страницы.
+   ========================================================================== */
+
+/* Тёмная тема по классу .dark на контейнере (аналог darkMode: 'class' из v3) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* --------------------------------------------------------------------------
+   1. Дизайн-токены
+   -------------------------------------------------------------------------- */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  /* Бренд */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+
+  /* Семантические цвета */
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f8fafc;
+  --color-canvas: #f3f4f8;
+  --color-line: #e5e7ef;
+  --color-ink: #1d2433;
+  --color-ink-muted: #5f6b80;
+
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #0ea5e9;
+
+  /* Анимации: animate-in — появление, animate-fade-loop — пульсация бейджей */
+  --animate-in: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-in-slow: fade-up 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-fade-loop: fade-in 3s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. Базовые стили
+   -------------------------------------------------------------------------- */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* В отдельной витрине Tailwind — единственная система стилей */
+  body {
+    @apply bg-canvas text-ink antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. Кастомные утилиты («плагин» Tailwind)
+   -------------------------------------------------------------------------- */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brand-300) transparent;
+
+  &::-webkit-scrollbar {
+    inline-size: 8px;
+    block-size: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: color-mix(in oklab, var(--color-brand-400) 55%, transparent);
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-brand-500);
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility text-gradient {
+  background-image: linear-gradient(90deg, #a855f7 0%, #ec4899 50%, #f97316 100%);
+  background-clip: text;
+  color: transparent;
+}
+
+@utility text-balance {
+  text-wrap: balance;
+}
+
+/* --------------------------------------------------------------------------
+   4. Переиспользуемые компоненты (@layer components + @apply)
+   -------------------------------------------------------------------------- */
+@layer components {
+  /* Кнопки: primary / secondary / ghost / danger */
+  .tw-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold
+      transition duration-200 ease-out select-none
+      focus-visible:outline-2 focus-visible:outline-offset-2
+      disabled:pointer-events-none disabled:opacity-50;
+  }
+  .tw-btn-primary {
+    @apply bg-brand-600 text-white shadow-sm shadow-brand-600/30
+      hover:bg-brand-700 active:scale-[0.98] focus-visible:outline-brand-500;
+  }
+  .tw-btn-secondary {
+    @apply border border-line bg-surface text-ink shadow-sm
+      hover:border-brand-300 hover:bg-brand-50 active:scale-[0.98]
+      dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:border-brand-400/60 dark:hover:bg-white/10;
+  }
+  .tw-btn-ghost {
+    @apply text-ink-muted hover:bg-ink/5 hover:text-ink dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100;
+  }
+  .tw-btn-danger {
+    @apply bg-danger text-white hover:bg-red-600 active:scale-[0.98];
+  }
+
+  /* Поля ввода */
+  .tw-input {
+    @apply w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-ink
+      placeholder:text-ink-muted/70 transition duration-200
+      hover:border-brand-300
+      focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 focus:outline-none
+      disabled:cursor-not-allowed disabled:bg-ink/5 disabled:opacity-60;
+  }
+
+  /* Карточки, бейджи, подписи */
+  .tw-card {
+    @apply rounded-2xl border border-line bg-surface shadow-sm transition duration-300
+      dark:border-white/10 dark:bg-slate-900;
+  }
+  .tw-badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+  .tw-label {
+    @apply mb-1.5 block text-sm font-medium text-ink dark:text-slate-300;
+  }
+
+  /* Оформление страниц заданий */
+  .tw-section-label {
+    @apply mb-2 inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-bold tracking-widest text-brand-700 uppercase
+      dark:bg-brand-500/15 dark:text-brand-300;
+  }
+  .tw-section-title {
+    @apply text-2xl font-bold tracking-tight text-ink sm:text-3xl dark:text-white;
+  }
+  .tw-section-lead {
+    @apply mt-2 max-w-2xl text-sm text-ink-muted sm:text-base dark:text-slate-400;
+  }
+  .tw-task-head {
+    @apply mb-4 rounded-xl border border-line bg-surface-elevated p-4 dark:border-white/10 dark:bg-slate-900/60;
+  }
+  .tw-task-head-title {
+    @apply text-base font-bold text-ink sm:text-lg dark:text-white;
+  }
+  .tw-task-head-note {
+    @apply mt-1 text-xs text-ink-muted sm:text-sm dark:text-slate-400;
+  }
+  .tw-code {
+    @apply rounded bg-brand-50 px-1.5 py-0.5 font-mono text-[0.78em] font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. Область действия в основном приложении
+   --------------------------------------------------------------------------
+   Preflight из @import 'tailwindcss' сбрасывает стили по всей странице —
+   для витрины /tailwind это нормально, но в CodeWay он ломает Bootstrap и
+   превращает все <h1>…<h6> в текст одного размера. Поэтому на странице /tasks
+   (контейнер .tw-layer) preflight включается снова, но уже внутри контейнера.
+   -------------------------------------------------------------------------- */
+.tw-layer,
+.tw-layer *,
+.tw-layer ::before,
+.tw-layer ::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: currentcolor;
+}
+
+.tw-layer {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  letter-spacing: normal;
+  color: var(--color-ink);
+  cursor: default;
+}
+
+.tw-layer :where(h1, h2, h3, h4, h5, h6) {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  margin: 0;
+  color: inherit;
+}
+
+.tw-layer :where(p, figure, blockquote, dl, dd, pre) {
+  margin: 0;
+}
+
+.tw-layer :where(ul, ol) {
+  margin: 0;
+  padding: 0;
+}
+
+.tw-layer :where(ul, ol):not([role='list']) {
+  list-style: none;
+}
+
+.tw-layer :where(img, svg, video, canvas, picture) {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.tw-layer :where(button, input, select, textarea) {
+  font: inherit;
+  color: inherit;
+  margin: 0;
+}
+
+.tw-layer :where(button) {
+  background-color: transparent;
+  background-image: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tw-layer :where(button, [role='button']):not(:disabled) {
+  cursor: pointer;
+}
+
+.tw-layer :where(table) {
+  border-collapse: collapse;
+  border-color: inherit;
+}
+
+.tw-layer :where(a) {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+.tw-layer :where(details > summary)::-webkit-details-marker {
+  display: none;
+}
+
+/* Стандартные Bootstrap-элементы вне слоя заданий: возвращаем как было */
+body:not(.tw-layer) {
+  cursor: auto;
+}

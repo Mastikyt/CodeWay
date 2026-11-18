@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task 1.1: Profile Card</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Card -->
+    <article class="bg-white p-6 rounded-2xl shadow-lg w-full md:w-80 flex flex-col items-center text-center space-y-4 transition-transform duration-300 hover:shadow-xl">
+        
+        <!-- Avatar -->
+        <img src="https://ui-avatars.com/api/?name=John+Doe&size=160" alt="Аватар пользователя" class="w-20 h-20 rounded-full border-4 border-gray-50 object-cover">
+        
+        <!-- Info -->
+        <div class="space-y-1">
+            <h2 class="text-xl font-semibold text-gray-900">John Doe</h2>
+            <p class="text-sm text-gray-500 font-medium">Frontend Developer</p>
+        </div>
+        
+        <!-- Bio -->
+        <p class="text-sm text-gray-600 leading-relaxed">
+            Passionately crafting clean, responsive, and accessible web experiences with Tailwind CSS.
+        </p>
+        
+        <!-- Buttons -->
+        <div class="flex gap-3 w-full pt-2">
+            <button class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors focus:ring-2 focus:ring-blue-300 focus:outline-none" aria-label="Подписаться">
+                Follow
+            </button>
+            <button class="flex-1 border border-gray-300 hover:border-gray-400 text-gray-700 font-medium py-2 rounded-lg transition-colors focus:ring-2 focus:ring-gray-200 focus:outline-none" aria-label="Отправить сообщение">
+                Message
+            </button>
+        </div>
+    </article>
+
+</body>
+</html>

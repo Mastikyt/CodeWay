@@ -1,0 +1,225 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "Имя": "Алексей",
+      "Фамилия": "Смирнов",
+      "Курс": "Frontend-разработка",
+      "Email": "smirnov@codeway.by",
+      "Телефон": "+375 (29) 111-22-33",
+      "Город": "Минск",
+      "Статус": "активный",
+      "Стоимость": "$129",
+      "createdAt": "2026-10-14T06:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "Имя": "Мария",
+      "Фамилия": "Иванова",
+      "Курс": "UX/UI дизайн",
+      "Email": "ivanova@codeway.by",
+      "Телефон": "+375 (44) 222-33-44",
+      "Город": "Гомель",
+      "Статус": "активный",
+      "Стоимость": "$119",
+      "createdAt": "2026-10-14T06:05:00.000Z"
+    },
+    {
+      "id": 3,
+      "Имя": "Дмитрий",
+      "Фамилия": "Кузнецов",
+      "Курс": "Backend-разработка",
+      "Email": "kuznetsov@codeway.by",
+      "Телефон": "+375 (33) 333-44-55",
+      "Город": "Гродно",
+      "Статус": "завершил",
+      "Стоимость": "$140",
+      "createdAt": "2026-10-14T06:10:00.000Z"
+    }
+  ],
+  "logs": [
+    {
+      "id": 1794981287629,
+      "action": "LOGIN",
+      "entityType": "user",
+      "entityId": 2,
+      "userId": 2,
+      "userName": "Студент (Минск)",
+      "oldData": null,
+      "newData": {
+        "email": "user@codeway.by"
+      },
+      "createdAt": "2026-11-18T05:54:47.629Z"
+    },
+    {
+      "id": 1794981369324,
+      "action": "LOGIN",
+      "entityType": "user",
+      "entityId": 1,
+      "userId": 1,
+      "userName": "Администратор (Беларусь)",
+      "oldData": null,
+      "newData": {
+        "email": "admin@codeway.by"
+      },
+      "createdAt": "2026-11-18T05:56:09.324Z"
+    },
+    {
+      "id": 1794981383741,
+      "action": "LOGIN",
+      "entityType": "user",
+      "entityId": 1,
+      "userId": 1,
+      "userName": "Администратор (Беларусь)",
+      "oldData": null,
+      "newData": {
+        "email": "admin@codeway.by"
+      },
+      "createdAt": "2026-11-18T05:56:23.741Z"
+    },
+    {
+      "id": 1794981636124,
+      "action": "REGISTER",
+      "entityType": "user",
+      "entityId": 1794981636118,
+      "userId": 1794981636118,
+      "userName": "Тест",
+      "oldData": null,
+      "newData": {
+        "name": "Тест",
+        "email": "test@codeway.by"
+      },
+      "createdAt": "2026-11-18T06:00:36.124Z"
+    },
+    {
+      "id": 1794981646638,
+      "action": "LOGIN",
+      "entityType": "user",
+      "entityId": 1794981636118,
+      "userId": 1794981636118,
+      "userName": "Тест",
+      "oldData": null,
+      "newData": {
+        "email": "test@codeway.by"
+      },
+      "createdAt": "2026-11-18T06:00:46.638Z"
+    },
+    {
+      "id": 1794981657199,
+      "action": "LOGIN",
+      "entityType": "user",
+      "entityId": 1,
+      "userId": 1,
+      "userName": "Администратор (Беларусь)",
+      "oldData": null,
+      "newData": {
+        "email": "admin@codeway.by"
+      },
+      "createdAt": "2026-11-18T06:00:57.199Z"
+    },
+    {
+      "id": 1794981720619,
+      "action": "LOGIN",
+      "entityType": "user",
+      "entityId": 1,
+      "userId": 1,
+      "userName": "Администратор (Беларусь)",
+      "oldData": null,
+      "newData": {
+        "email": "admin@codeway.by"
+      },
+      "createdAt": "2026-11-18T06:02:00.619Z"
+    },
+    {
+      "id": 1794981731242,
+      "action": "LOGIN",
+      "entityType": "user",
+      "entityId": 2,
+      "userId": 2,
+      "userName": "Студент (Минск)",
+      "oldData": null,
+      "newData": {
+        "email": "user@codeway.by"
+      },
+      "createdAt": "2026-11-18T06:02:11.242Z"
+    },
+    {
+      "id": 1794981740807,
+      "action": "LOGIN",
+      "entityType": "user",
+      "entityId": 1,
+      "userId": 1,
+      "userName": "Администратор (Беларусь)",
+      "oldData": null,
+      "newData": {
+        "email": "admin@codeway.by"
+      },
+      "createdAt": "2026-11-18T06:02:20.807Z"
+    },
+    {
+      "id": 1794982269576,
+      "action": "LOGIN",
+      "entityType": "user",
+      "entityId": 1,
+      "userId": 1,
+      "userName": "Администратор (Беларусь)",
+      "oldData": null,
+      "newData": {
+        "email": "admin@codeway.by"
+      },
+      "createdAt": "2026-11-18T06:11:09.576Z"
+    },
+    {
+      "id": 1794983650574,
+      "action": "LOGIN",
+      "entityType": "user",
+      "entityId": 1,
+      "userId": 1,
+      "userName": "Администратор (Беларусь)",
+      "oldData": null,
+      "newData": {
+        "email": "admin@codeway.by"
+      },
+      "createdAt": "2026-11-18T06:34:10.574Z"
+    }
+  ],
+  "files": [],
+  "users": [
+    {
+      "id": 1,
+      "name": "Администратор (Беларусь)",
+      "email": "admin@codeway.by",
+      "password": "admin123",
+      "role": "admin",
+      "phone": "+375 (29) 555-42-42",
+      "city": "Минск",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Студент (Минск)",
+      "email": "user@codeway.by",
+      "password": "user123",
+      "role": "user",
+      "phone": "+375 (44) 765-43-21",
+      "city": "Минск",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 1794981636118,
+      "name": "Тест",
+      "email": "test@codeway.by",
+      "password": "test123",
+      "role": "user",
+      "createdAt": "2026-11-18T06:00:36.118Z"
+    },
+    {
+      "id": 1794982640635,
+      "name": "Diag User",
+      "email": "diag2318@codeway.by",
+      "password": "diag123",
+      "role": "user",
+      "createdAt": "2026-11-18T06:17:20.635Z"
+    }
+  ]
+}
